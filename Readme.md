@@ -99,9 +99,9 @@ This project is built day by day. Each commit corresponds to one day of work.
 | Day | Date | What was built | Commit |
 |-----|------|----------------|--------|
 | 1 | 22 Mar 2026 | Project folder structure, versions.tf, root variables | `Day 1: Set up Terraform project folder structure` |
-| 2 | 23 Mar 2026 | S3 remote state + DynamoDB locking | _coming soon_ |
-| 3 | 24 Mar 2026 | VPC module — subnets, IGW, route tables | _coming soon_ |
-| 4 | 25 Mar 2026 | NAT gateway + private subnet routing | _coming soon_ |
+| 2 | 23 Mar 2026 | S3 remote state + DynamoDB locking | `Day 2: Configure S3 remote state and DynamoDB locking` |
+| 3 | 24 Mar 2026 | VPC module — subnets, IGW, route tables |  `Day 3: Build VPC module with public/private subnets, IGW and route tables` |
+| 4 | 25 Mar 2026 | NAT Gateway + private subnet routing | `Day 4: Add NAT Gateway with conditional creation and private subnet routing` |
 | 5 | 26 Mar 2026 | EC2 + ASG module with security groups | _coming soon_ |
 | 6 | 27 Mar 2026 | IAM roles + instance profiles | _coming soon_ |
 | 7 | 28 Mar 2026 | Code cleanup + README polish | _coming soon_ |
