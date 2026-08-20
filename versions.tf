@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.15.0"
 
   required_providers {
     aws = {
@@ -12,7 +12,7 @@ terraform {
     bucket         = "aws-infra-terraform-state-kb"
     key            = "global/terraform.tfstate"
     region         = "ap-south-1"
-    dynamodb_table = "terraform-state-lock"
+    use_lockfile   = true
     encrypt        = true
   }
 }

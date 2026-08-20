@@ -31,3 +31,9 @@ variable "availability_zones" {
   type        = list(string)
   default     = ["ap-south-1a", "ap-south-1b"]
 }
+
+variable "enable_nat_gateway" {
+  description = "Whether to create a NAT Gateway. Set false in dev to save cost."
+  type        = bool
+  default     = true
+}
