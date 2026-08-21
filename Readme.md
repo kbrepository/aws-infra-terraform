@@ -1,21 +1,52 @@
 # aws-infra-terraform 🚀
 
 ![Terraform](https://img.shields.io/badge/Terraform->=1.5.0-7B42BC?style=flat&logo=terraform)
-![AWS](https://img.shields.io/badge/AWS-Cloud-FF9900?style=flat&logo=amazonaws)
-![Status](https://img.shields.io/badge/Status-In%20Progress-1D9E75?style=flat)
+![AWS](https://img.shields.io/badge/AWS-ap--south--1-FF9900?style=flat&logo=amazonaws)
+![CI/CD](https://img.shields.io/badge/CI/CD-GitHub%20Actions-2088FF?style=flat&logo=githubactions)
+![Status](https://img.shields.io/badge/Status-Week%201%20Complete-1D9E75?style=flat)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat)
 
-A production-grade AWS infrastructure built from scratch using **Terraform modules**, automated with **GitHub Actions CI/CD**, and monitored with **CloudWatch** — built as a portfolio project to demonstrate real-world DevOps and Cloud Infrastructure engineering practices.
+A **production-grade AWS infrastructure built from scratch** using Terraform modules, automated with GitHub Actions CI/CD, secured with tfsec, cost-estimated with Infracost, and monitored with CloudWatch.
+
+Built as a portfolio project to demonstrate real-world DevOps and Cloud Infrastructure engineering — every decision documented, every module reusable.
+
+> 📝 Follow the full build journey on Medium → [Building Production AWS Infrastructure from Scratch](#)
+
+---
+
+## 📐 Architecture
+
+```
+                          ┌─────────────────────────────────────┐
+                          │           AWS VPC (10.0.0.0/16)     │
+                          │                                     │
+          Internet        │  ┌──────────────┐  ┌─────────────┐ │
+        ──────────► IGW ──┼─►│Public Subnet │  │Public Subnet│ │
+                          │  │ AZ-a         │  │ AZ-b        │ │
+                          │  │ 10.0.1.0/24  │  │ 10.0.2.0/24 │ │
+                          │  │              │  │             │ │
+                          │  │  NAT Gateway │  │             │ │
+                          │  └──────┬───────┘  └─────────────┘ │
+                          │         │ (outbound only)           │
+                          │  ┌──────▼───────┐  ┌─────────────┐ │
+                          │  │Private Subnet│  │Private Subnet│ │
+                          │  │ AZ-a         │  │ AZ-b        │ │
+                          │  │ 10.0.10.0/24 │  │10.0.20.0/24 │ │
+                          │  │              │  │             │ │
+                          │  │  EC2 (ASG)   │  │  EC2 (ASG)  │ │
+                          │  └──────────────┘  └─────────────┘ │
+                          └─────────────────────────────────────┘
+```
 
 ---
 
 ## 📌 Project Goals
 
-- Build reusable, environment-agnostic Terraform modules for AWS infrastructure
-- Implement remote state management with S3 + DynamoDB locking
-- Automate deployments using GitHub Actions CI/CD pipelines
-- Add security scanning (tfsec) and cost estimation (Infracost) as pipeline gates
-- Monitor infrastructure with CloudWatch alarms and SNS notifications
+- ✅ Build reusable, environment-agnostic Terraform modules
+- ✅ Remote state management with S3 + DynamoDB locking
+- ⏳ Automate deployments via GitHub Actions CI/CD *(Week 2)*
+- ⏳ Security scanning with tfsec + cost estimation with Infracost *(Week 2)*
+- ⏳ CloudWatch monitoring + SNS alerts *(Week 3)*
 
 ---
 
@@ -52,21 +83,32 @@ aws-infra-terraform/
 └── .gitignore                  # Excludes .terraform/, state files, secrets
 ```
 
-### Why this structure?
+### Design Decisions
 
-**Modules over monolith** — Each module (vpc, compute, iam) is independently reusable. You can call the vpc module across multiple environments without duplicating code. Changes to one module don't risk breaking another.
+**Why modular structure?**
+Each module (vpc, compute, iam) is independently reusable and versioned. Changing the compute module carries zero risk to networking. Modules expose inputs and outputs — the environment wires them together.
 
-**Environment isolation** — The `envs/dev` and `envs/prod` folders hold environment-specific `.tfvars`. Dev and prod never share the same state, so a mistake in dev can never affect production.
+**Why separate state per environment?**
+Dev and prod use the same S3 bucket but different state keys (`envs/dev/terraform.tfstate` vs `envs/prod/terraform.tfstate`). A failed dev apply can never corrupt prod state.
 
-**Root vs modules** — The root `main.tf` acts as the orchestrator — it calls each module and wires outputs to inputs. Modules themselves contain no environment-specific values; those are always passed in via variables.
+**Why private subnets for EC2?**
+Application servers have no business being directly reachable from the internet. NAT Gateway gives them outbound access without inbound exposure — defence in depth.
+
+**Why Launch Template over Launch Configuration?**
+Launch Configurations are legacy. Launch Templates support versioning, IMDSv2 enforcement, mixed instance types, and spot instances. Always use Launch Templates.
+
+**Why `enable_nat_gateway` variable?**
+NAT Gateway costs ~$32/month. In dev you don't need it for infrastructure testing. The boolean flag lets dev disable it while prod enables it — cost awareness built into the design.
 
 ---
 
 ## ⚙️ Prerequisites
 
-- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5.0
-- [AWS CLI](https://aws.amazon.com/cli/) configured with appropriate credentials
-- An AWS account (free tier is sufficient for dev environment)
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Terraform](https://developer.hashicorp.com/terraform/install) | >= 1.5.0 | Infrastructure as Code |
+| [AWS CLI](https://aws.amazon.com/cli/) | >= 2.0 | AWS authentication |
+| AWS Account | Free tier | Deployment target |
 
 ---
 
@@ -77,59 +119,64 @@ aws-infra-terraform/
 git clone https://github.com/kbrepository/aws-infra-terraform.git
 cd aws-infra-terraform
 
-# 2. Navigate to the environment you want to deploy
+# 2. Bootstrap remote state (one-time setup)
+aws s3api create-bucket \
+  --bucket aws-infra-terraform-state-kb \
+  --region ap-south-1 \
+  --create-bucket-configuration LocationConstraint=ap-south-1
+
+aws dynamodb create-table \
+  --table-name terraform-state-lock \
+  --attribute-definitions AttributeName=LockID,AttributeType=S \
+  --key-schema AttributeName=LockID,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region ap-south-1
+
+# 3. Deploy dev environment
 cd envs/dev
-
-# 3. Initialise Terraform
 terraform init
-
-# 4. Review the plan
 terraform plan -var-file="terraform.tfvars"
-
-# 5. Apply
 terraform apply -var-file="terraform.tfvars"
+
+# 4. Destroy when done (avoid charges)
+terraform destroy -var-file="terraform.tfvars"
 ```
 
 ---
 
 ## 📅 Build Log
 
-This project is built day by day. Each commit corresponds to one day of work.
-
-| Day | Date | What was built | Commit |
+| Day | Date | What Was Built | Commit |
 |-----|------|----------------|--------|
 | 1 | 22 Mar 2026 | Project folder structure, versions.tf, root variables | `Day 1: Set up Terraform project folder structure` |
 | 2 | 23 Mar 2026 | S3 remote state + DynamoDB locking | `Day 2: Configure S3 remote state and DynamoDB locking` |
-| 3 | 24 Mar 2026 | VPC module — subnets, IGW, route tables |  `Day 3: Build VPC module with public/private subnets, IGW and route tables` |
-| 4 | 19 Mar 2026 | NAT Gateway + private subnet routing | `Day 4: Add NAT Gateway with conditional creation and private subnet routing` |
-| 5 | 20 Mar 2026 | EC2 + ASG module with security groups | `Day 5: Build EC2 and ASG module with launch template and security groups` |
+| 3 | 24 Mar 2026 | VPC module — subnets, IGW, route tables | `Day 3: Build VPC module with public/private subnets, IGW and route tables` |
+| 4 | 19 Aug 2026 | NAT Gateway with conditional creation + private routing | `Day 4: Add NAT Gateway with conditional creation and private subnet routing` |
+| 5 | 20 Aug 2026 | EC2 + ASG module with launch template + security groups | `Day 5: Build EC2 and ASG module with launch template and security groups` |
 | 6 | 21 Aug 2026 | IAM roles + instance profiles + full module wiring | `Day 6: Add IAM roles, instance profiles and wire all modules together` |
-| 7 | 28 Mar 2026 | Code cleanup + README polish | _coming soon_ |
-
-> Full build log continues through Week 2 (CI/CD) and Week 3 (Monitoring + Interview Prep)
+| 7 | 21 Aug 2026 | Code cleanup, README polish, Week 1 complete | `Day 7: Week 1 complete — code cleanup and README update` |
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Tool | Purpose |
-|------|---------|
-| Terraform >= 1.5.0 | Infrastructure as Code |
-| AWS | Cloud provider |
-| S3 + DynamoDB | Remote state + locking _(Day 2)_ |
-| GitHub Actions | CI/CD automation _(Week 2)_ |
-| tfsec | Security scanning _(Week 2)_ |
-| Infracost | Cost estimation _(Week 2)_ |
-| CloudWatch + SNS | Monitoring + alerts _(Week 3)_ |
+| Tool | Purpose | Status |
+|------|---------|--------|
+| Terraform >= 1.5.0 | Infrastructure as Code | ✅ Active |
+| AWS (ap-south-1) | Cloud provider | ✅ Active |
+| S3 + DynamoDB | Remote state + locking | ✅ Active |
+| GitHub Actions | CI/CD automation | ⏳ Week 2 |
+| tfsec | Security scanning | ⏳ Week 2 |
+| Infracost | Cost estimation | ⏳ Week 2 |
+| CloudWatch + SNS | Monitoring + alerts | ⏳ Week 3 |
 
 ---
 
 ## ✍️ Author
 
-**Kalpesh Bhangare** — Cloud Consultant | 7 years in Linux, AWS, and Infrastructure as Code
+**Kalpesh Bhangare** — 8 years in Linux administration and AWS Cloud Infrastructure
 
-- 📝 [Medium](https://medium.com/@kalpeshbhangre96) — I write about AWS, Terraform, and DevOps
-- 💼 [LinkedIn](https://www.linkedin.com/in/kb2005)
+- 📝 [Medium](https://medium.com/@kalpeshbhangre96)
 - 🐙 [GitHub](https://github.com/kbrepository)
 
 ---
