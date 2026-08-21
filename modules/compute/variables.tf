@@ -21,6 +21,7 @@ variable "private_subnet_ids" {
 variable "ami_id" {
   description = "AMI ID for EC2 instances — use Amazon Linux 2023"
   type        = string
+  default     = ""
 }
 
 variable "instance_type" {

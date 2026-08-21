@@ -1,1 +1,21 @@
-.terraform*
+# Local .terraform directories
+**/.terraform/*
+
+# Terraform state files — never commit these
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Terraform variable files with secrets
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Lock file should be committed — remove this if present
+# .terraform.lock.hcl  ← make sure this line is NOT in your gitignore
