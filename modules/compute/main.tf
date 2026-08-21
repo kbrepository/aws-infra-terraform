@@ -90,12 +90,12 @@ resource "aws_launch_template" "main" {
   # Metadata options — disable IMDSv1 for security
   metadata_options {
     http_endpoint               = "enabled"
-    http_tokens                 = "required"  # Forces IMDSv2
+    http_tokens                 = "required" # Forces IMDSv2
     http_put_response_hop_limit = 1
   }
 
   monitoring {
-    enabled = true  # Enables detailed CloudWatch monitoring
+    enabled = true # Enables detailed CloudWatch monitoring
   }
 
   tag_specifications {
@@ -116,7 +116,7 @@ resource "aws_launch_template" "main" {
 # ── Auto Scaling Group ──────────────────────────────────────
 resource "aws_autoscaling_group" "main" {
   name                = "${var.project_name}-${var.environment}-asg"
-  vpc_zone_identifier = var.private_subnet_ids  # Launch in private subnets
+  vpc_zone_identifier = var.private_subnet_ids # Launch in private subnets
   min_size            = var.asg_min_size
   max_size            = var.asg_max_size
   desired_capacity    = var.asg_desired_capacity
@@ -129,7 +129,7 @@ resource "aws_autoscaling_group" "main" {
 
   # Health check — EC2 checks if instance is running
   health_check_type         = "EC2"
-  health_check_grace_period = 300  # 5 mins for instance to boot before health check
+  health_check_grace_period = 300 # 5 mins for instance to boot before health check
 
   # Replace instances when launch template changes
   instance_refresh {
@@ -159,7 +159,7 @@ resource "aws_autoscaling_group" "main" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = [desired_capacity]  # Don't reset if autoscaling changes it
+    ignore_changes        = [desired_capacity] # Don't reset if autoscaling changes it
   }
 }
 
