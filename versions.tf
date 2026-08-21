@@ -9,11 +9,11 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "aws-infra-terraform-state-kb"
-    key            = "global/terraform.tfstate"
-    region         = "ap-south-1"
-    use_lockfile   = true
-    encrypt        = true
+    bucket       = "aws-infra-terraform-state-kb"
+    key          = "global/terraform.tfstate"
+    region       = "ap-south-1"
+    use_lockfile = true
+    encrypt      = true
   }
 }
 
