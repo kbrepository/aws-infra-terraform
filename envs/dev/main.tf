@@ -25,6 +25,16 @@ module "vpc" {
   enable_nat_gateway   = false
 }
 
+# ── IAM Module ───────────────────────────────────────────────
+module "iam" {
+  source = "../../modules/iam"
+
+  project_name      = var.project_name
+  environment       = var.environment
+  state_bucket_name = "aws-infra-terraform-state-kb"
+}
+
+
 module "compute" {
   source = "../../modules/compute"
 
@@ -32,7 +42,7 @@ module "compute" {
   environment           = var.environment
   vpc_id                = module.vpc.vpc_id
   private_subnet_ids    = module.vpc.private_subnet_ids
-  ami_id                = "ami-0f58b397bc5c1f2e8" # Amazon Linux 2023 ap-south-1
+  ami_id                = "ami-0332d564d76dbd8d6" # Amazon Linux 2023 ap-south-1
   instance_type         = "t3.micro"
   instance_profile_name = module.iam.instance_profile_name
   ssh_allowed_cidrs     = ["10.0.0.0/8"] # Only from within VPC

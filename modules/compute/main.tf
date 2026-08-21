@@ -50,9 +50,19 @@ resource "aws_security_group" "ec2" {
 
 # ── Launch Template ─────────────────────────────────────────
 # Modern replacement for Launch Configurations — always use this
+# Find a region-appropriate Amazon Linux 2023 AMI when `ami_id` is not provided
+data "aws_ami" "amazon_linux_2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64*"]
+  }
+}
+
 resource "aws_launch_template" "main" {
   name_prefix   = "${var.project_name}-${var.environment}-lt-"
-  image_id      = var.ami_id
+  image_id      = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux_2023.id
   instance_type = var.instance_type
 
   # Attach security group
